@@ -1,0 +1,102 @@
+# We are going to create one regtest bitcoin blockchain
+# and create two different lightning network nodes.
+#
+# Those two ln nodes act as two different parties
+# that can exchange satothis on BTC/LN.
+# This setup is needed to allow lnd-regtest-1, which
+# we will use as our "bank" that can emit invoices
+# and ask for payments, to accept money.
+
+services:
+  #Bitcoin setup
+  bitcoind:
+    image: kylemanna/bitcoind
+    container_name: bitcoind
+    networks:
+      byober-kurwa:
+        ipv4_address: 172.23.0.20
+    ports:
+      - 48332:48332
+      - 48333:48333
+      - 28332:28332
+      - 28333:28333
+    volumes:
+      - ./bitcoin-regtest:/bitcoin/.bitcoin
+    restart: unless-stopped
+
+  # Lightning network setup
+  lnd-regtest-1:
+    image: lightninglabs/lnd:v0.18.3-beta
+    container_name: regtest-1-lnd
+    networks:
+      byober-kurwa:
+        ipv4_address: 172.23.0.30
+    ports:
+      - 8081:8080
+    volumes:
+      - ./lnd-regtest-1:/root/.lnd
+      - ./bitcoin-regtest/regtest:/root/.bitcoin
+    restart: unless-stopped
+    depends_on:
+      - bitcoind
+      - postgres-regtest-1
+
+  lnd-regtest-2:
+    environment:
+      LND_REGTEST_2_HTTP_PORT: ${LND_REGTEST_2_HTTP_PORT}
+    image: lightninglabs/lnd:v0.18.3-beta
+    container_name: regtest-2-lnd
+    networks:
+      byober-kurwa:
+        ipv4_address: 172.23.0.40
+    ports:
+      - 8082:8080
+    volumes:
+      - ./lnd-regtest-2:/root/.lnd
+      - ./bitcoin-regtest/regtest:/root/.bitcoin
+    restart: unless-stopped
+    depends_on:
+      - bitcoind
+      - postgres-regtest-2
+
+  # Postgres setup
+  postgres-regtest-1:
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: lnd-regtest-db-1
+    image: postgres
+    container_name: postgres-regtest-1
+    networks:
+      byober-kurwa:
+    volumes:
+      - postgres-regtest-1:/var/lib/postgresql/data
+    restart: unless-stopped
+    shm_size: 128mb
+
+  postgres-regtest-2:
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: lnd-regtest-db-2
+    image: postgres
+    container_name: postgres-regtest-2
+    volumes:
+      - postgres-regtest-2:/var/lib/postgresql/data
+    networks:
+      byober-kurwa:
+    restart: unless-stopped
+    shm_size: 128mb
+
+# Network setup
+networks:
+  byober-kurwa:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "172.23.0.0/24"
+
+# Volumes setup
+volumes:
+  postgres-regtest-1:
+  postgres-regtest-2:

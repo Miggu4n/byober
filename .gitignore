@@ -1,0 +1,10 @@
+/bitcoin-regtest/*
+/lnd-regtest-1/*
+/lnd-regtest-2/*
+
+
+!/bitcoin-regtest/bitcoin.conf
+!/lnd-regtest-1/lnd.conf
+!/lnd-regtest-1/password.txt
+!/lnd-regtest-2/lnd.conf
+!/lnd-regtest-2/password.txt
